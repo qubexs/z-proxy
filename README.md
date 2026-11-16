@@ -19,32 +19,19 @@ This is the **qubexs/z-proxy** repository — a patched fork of [12errh/zen-prox
 
 ---
 
-## Quick start
+## Two install types
 
-### Standalone
+### Type 1 — Standalone
+
+Runs anywhere, no OmniRoute needed.
 
 ```bash
-# Clone or download this repo
 git clone https://github.com/qubexs/z-proxy.git
 cd z-proxy
-
-# Start (uses Bun if available, falls back to Node)
-./run-zen-proxy.sh
-
-# Or start in foreground
-bun zen-proxy.mjs     # recommended
-# or
-node zen-proxy.mjs
+./install.sh          # or: ./run-zen-proxy.sh
 ```
 
-Health check:
-
-```bash
-curl -s http://127.0.0.1:8787/health
-# {"ok":true,"upstream":"https://opencode.ai/inference/openai/v1"}
-```
-
-Point any OpenAI-compatible agent at:
+The proxy listens on `http://127.0.0.1:8787`. Point any agent at it:
 
 | Setting | Value |
 |---|---|
@@ -52,34 +39,42 @@ Point any OpenAI-compatible agent at:
 | API key | `public` |
 | Model | anything from `GET /v1/models` |
 
-For Claude Code:
+### Type 2 — Auto-install side-by-side with OmniRoute
+
+If OmniRoute is already installed (global npm `omniroute`), this copies zen-proxy
+next to OmniRoute's other sidecars and registers it as a routable provider.
 
 ```bash
-# Start the proxy, then run Claude Code with it
-zen-claude
-# (zen-claude is provided by upstream zen-proxy; you can also set ANTHROPIC_BASE_URL manually)
+# install files + register node + activate connection
+node install-omniroute.mjs
+
+# same, and start the proxy under Bun
+node install-omniroute.mjs --start
+
+# only copy files (no API changes)
+node install-omniroute.mjs --no-register
+
+# only register (files already in place)
+node install-omniroute.mjs --no-copy
 ```
 
-### Side-by-side with OmniRoute
+What it does:
 
-Drop the `zen-proxy` folder inside your OmniRoute workspace:
+1. Finds OmniRoute (`%APPDATA%\npm\node_modules\omniroute` on Windows,
+   `/usr/local/lib/node_modules/omniroute` on macOS/Linux; override with
+   `--omniroute <path>` or `OMNIROUTE_DIR`).
+2. Copies zen-proxy into `<dataDir>/bin/zen-proxy` (default `~/.omniroute/bin/zen-proxy`).
+3. If the OmniRoute server is reachable (`http://127.0.0.1:20128`), it creates:
+   - a **provider node** — `type: openai-compatible`, `apiType: chat`,
+     `prefix: zen`, `baseUrl: http://127.0.0.1:8787/v1`
+   - an **active provider connection** bound to that node
+4. Prints the route prefix.
 
-```
-omniroute/
-└── zen-proxy/
-    ├── zen-proxy.mjs
-    ├── zen-proxy.json
-    ├── run-zen-proxy.sh
-    ├── install.sh
-    └── README.md
-```
+After that, OmniRoute exposes the free models as `zen/<model>` — e.g.
+`zen/big-pickle`, `zen/deepseek-v4.1-flash-free`.
 
-From the OmniRoute root:
-
-```bash
-./zen-proxy/run-zen-proxy.sh       # start
-./zen-proxy/run-zen-proxy.sh stop  # stop
-```
+> The installer is idempotent: re-running reuses an existing node/connection
+> rather than creating duplicates.
 
 ---
 
@@ -131,7 +126,8 @@ identity rotation every 60 min — fresh session/project/trace per window
 | `zen-proxy.mjs` | The patched server (zero dependencies). |
 | `zen-proxy.json` | Hot-reloadable config. |
 | `run-zen-proxy.sh` | Launcher: `./run-zen-proxy.sh [start|stop]`. |
-| `install.sh` | Quick install + run with Bun/Node. |
+| `install.sh` | Type 1 quick start (Bun/Node). |
+| `install-omniroute.mjs` | Type 2 auto-install side-by-side with OmniRoute. |
 | `package.json` | npm metadata. |
 | `README.md` | This file. |
 

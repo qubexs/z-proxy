@@ -24,7 +24,8 @@
       "zen-proxy.json",
       "README.md",
       "run-zen-proxy.sh",
-      "install.sh"
+      "install.sh",
+      "install-omniroute.mjs"
     ]
   }
 ]
