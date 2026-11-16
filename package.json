@@ -1,0 +1,30 @@
+[
+  {
+    "name": "zen-proxy",
+    "version": "2.0.1",
+    "description": "Use OpenCode Zen's free models from any AI coding agent — no account, no API key. Hourly identity rotation added.",
+    "main": "zen-proxy.mjs",
+    "scripts": {
+      "start": "./run-zen-proxy.sh",
+      "stop": "./run-zen-proxy.sh stop",
+      "test": "echo \"Test health\" && curl -s http://127.0.0.1:8787/health"
+    },
+    "keywords": ["ai", "coding", "agent", "proxy", "free", "openai-compatible", "anthropic", "open-code"],
+    "author": "qubexs",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/qubexs/z-proxy"
+    },
+    "bugs": {
+      "url": "https://github.com/qubexs/z-proxy/issues"
+    },
+    "files": [
+      "zen-proxy.mjs",
+      "zen-proxy.json",
+      "README.md",
+      "run-zen-proxy.sh",
+      "install.sh"
+    ]
+  }
+]
