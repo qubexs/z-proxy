@@ -76,6 +76,22 @@ After that, OmniRoute exposes the free models as `zen/<model>` — e.g.
 > The installer is idempotent: re-running reuses an existing node/connection
 > rather than creating duplicates.
 
+#### Why the models take a moment to appear
+
+OmniRoute's model-sync scheduler only visits providers on its built-in
+allow-list, and `openai-compatible-chat` is not one of them. The installer sets
+`autoSync: true` in the connection's `providerSpecificData`, which opts the node
+in. Discovery then runs on OmniRoute's normal cycle (up to 6 h), so the `zen/*`
+models show up then — or immediately if you hit **Sync models** on the
+connection in the OmniRoute dashboard.
+
+A registered node without `autoSync` still validates fine; it just never gets a
+model list, so nothing routes to it.
+
+> The installer is idempotent: re-running reuses an existing node/connection
+> rather than creating duplicates, and re-applies `autoSync` to repair earlier
+> installs.
+
 ---
 
 ## Configuration
@@ -116,6 +132,35 @@ The startup log confirms it:
 ```
 identity rotation every 60 min — fresh session/project/trace per window
 ```
+
+---
+
+## Troubleshooting
+
+### Every model returns 429
+
+The free tier is **shared and rate-limited per identity**. When several models
+sit at `ok:0, fail:N` in `/api/status`, nothing upstream will answer — that is a
+supply-side limit, not a proxy bug. Check with:
+
+```bash
+curl -s http://127.0.0.1:8787/api/status
+```
+
+Useful fields: `sync.rateLimited` (models that answered 429) and
+`sync.observed` (per-model ok/fail counters). Identity rotation gives each hour a
+fresh window, so retrying after a rotation is usually what clears it.
+
+### OmniRoute has the connection but no `zen/*` models
+
+The connection is missing `autoSync`. Re-run the installer; it patches
+`providerSpecificData.autoSync = true` on the existing connection.
+
+### `omniroute nodes add` fails with `400`
+
+The CLI's `nodes add` omits the `prefix` and `apiType` fields that the
+provider-node API requires. Use `install-omniroute.mjs`, which posts the full
+body.
 
 ---
 

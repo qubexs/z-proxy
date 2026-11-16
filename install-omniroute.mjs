@@ -173,6 +173,18 @@ async function register() {
   }
 
   // Connection
+  //
+  // `autoSync: true` is what makes OmniRoute discover this node's models: the
+  // model-sync scheduler only visits providers in its default allow-list, and
+  // "openai-compatible-chat" is not one of them. Without it the connection stays
+  // valid but its models never enter the catalog.
+  const psd = {
+    baseUrl: BASE_URL,
+    apiType: API_TYPE,
+    prefix: PREFIX,
+    nodeId: node.id,
+    autoSync: true,
+  };
   const provRes = await api(token, "GET", "/api/providers");
   const list = provRes.json?.providers ?? provRes.json?.connections ?? provRes.json?.data ?? [];
   let conn = Array.isArray(list) ? list.find((p) => p.name === NODE_NAME) : null;
@@ -181,12 +193,7 @@ async function register() {
       provider: `${NODE_TYPE}-${API_TYPE}`,
       name: NODE_NAME,
       apiKey: "public",
-      providerSpecificData: {
-        baseUrl: BASE_URL,
-        apiType: API_TYPE,
-        prefix: PREFIX,
-        nodeId: node.id,
-      },
+      providerSpecificData: psd,
     });
     if (created.status >= 300) fail(`connection create failed: ${created.text.slice(0, 300)}`);
     conn = created.json.connection;
@@ -195,12 +202,17 @@ async function register() {
     log(`connection exists : ${conn.id}`);
   }
 
-  // Activate
-  const activated = await api(token, "PATCH", `/api/providers/${conn.id}`, { isActive: true });
+  // Activate + make sure autoSync is on (also repairs earlier installs).
+  const activated = await api(token, "PATCH", `/api/providers/${conn.id}`, {
+    isActive: true,
+    providerSpecificData: { ...(conn.providerSpecificData ?? {}), ...psd },
+  });
   if (activated.status >= 300) log(`activate returned ${activated.status}`);
-  else log("connection active");
+  else log("connection active (autoSync on)");
 
   log(`route as: ${PREFIX}/<model>  (e.g. ${PREFIX}/big-pickle)`);
+  log("models appear after OmniRoute's next model-sync cycle (<=6h),");
+  log("or immediately from Dashboard -> Providers -> zen-proxy -> Sync models.");
 }
 
 // ── 5. Start zen-proxy ───────────────────────────────────────────────────────
